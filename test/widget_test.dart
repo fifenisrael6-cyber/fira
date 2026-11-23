@@ -1,7 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fira/main.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('FIRA opens the assistant home screen', (tester) async {
     await tester.pumpWidget(const FiraApp());
     await tester.pumpAndSettle();
