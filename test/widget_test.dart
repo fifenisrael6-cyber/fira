@@ -1,30 +1,18 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:fira/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('FIRA opens the assistant home screen', (tester) async {
+    await tester.pumpWidget(const FiraApp());
+    expect(find.text('FIRA AI'), findsOneWidget);
+    expect(find.text('Que souhaitez-vous\nconstruire aujourd’hui ?'), findsOneWidget);
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('Projects tab is accessible', (tester) async {
+    await tester.pumpWidget(const FiraApp());
+    await tester.tap(find.text('Projets'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mes projets'), findsOneWidget);
+    expect(find.text('Moteur IA'), findsOneWidget);
   });
 }
