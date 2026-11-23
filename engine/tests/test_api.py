@@ -3,34 +3,72 @@ import app.main as main
 
 client = TestClient(main.app)
 
+
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
-def test_capabilities_keep_shell_execution_disabled():
+
+def test_capabilities_keep_active_execution_disabled():
     data = client.get("/v1/capabilities").json()
     assert data["autonomy_profile"] == "high"
-    assert data["security_profile"] == "sensitive"
+    assert data["security_profile"] == "defensive-authorized-audits"
+    assert data["active_scanning_enabled"] is False
     assert data["agent_execution_enabled"] is False
+    assert data["youtube_learning"] is True
+    assert data["security_audit_planning"] is True
     assert data["provider_mode"] == "local-first-no-api-key"
+
 
 def test_chat_uses_local_model_without_provider_key(monkeypatch):
     async def fake_model(messages):
         assert messages[0]["role"] == "system"
         return "Bonjour depuis le modèle local."
+
     monkeypatch.setattr(main, "ask_local_model", fake_model)
     response = client.post("/v1/chat", json={"message": "Bonjour"})
     assert response.status_code == 200
     assert response.json()["answer"] == "Bonjour depuis le modèle local."
 
+
 def test_chat_rejects_empty_message():
     assert client.post("/v1/chat", json={"message": ""}).status_code == 422
+
 
 def test_youtube_rejects_non_youtube_url():
     response = client.post("/v1/learn/youtube", json={"url": "https://example.com/video"})
     assert response.status_code == 400
 
+
 def test_youtube_rejects_invalid_video_id():
     response = client.post("/v1/learn/youtube", json={"url": "https://youtube.com/watch?v=bad"})
     assert response.status_code == 400
+
+
+def test_audit_plan_requires_authorization_confirmation():
+    response = client.post("/v1/security/audit-plan", json={
+        "scope": "Site de test de mon association",
+        "authorization_confirmed": False,
+    })
+    assert response.status_code == 403
+
+
+def test_audit_plan_only_generates_a_plan(monkeypatch):
+    async def fake_model(messages):
+        assert "plan d'audit défensif" in messages[0]["content"]
+        assert "mon-site.example" in messages[1]["content"]
+        return "Plan d'audit passif."
+
+    monkeypatch.setattr(main, "ask_local_model", fake_model)
+    response = client.post("/v1/security/audit-plan", json={
+        "authorization_confirmed": True,
+        "scope": "Site de démonstration dont je suis administrateur",
+        "assets": ["mon-site.example"],
+        "objective": "Vérifier la configuration",
+    })
+    assert response.status_code == 200
+    assert response.json() == {
+        "plan": "Plan d'audit passif.",
+        "execution_performed": "false",
+    }
