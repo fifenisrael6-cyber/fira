@@ -72,3 +72,33 @@ def test_audit_plan_only_generates_a_plan(monkeypatch):
         "plan": "Plan d'audit passif.",
         "execution_performed": "false",
     }
+
+def test_wifi_audit_requires_authorization():
+    response = client.post("/v1/security/wifi-audit", json={"security_mode": "open"})
+    assert response.status_code == 403
+
+
+def test_wifi_audit_reports_open_network_without_scanning():
+    response = client.post("/v1/security/wifi-audit", json={
+        "authorization_confirmed": True,
+        "security_mode": "open",
+        "wps_enabled": True,
+        "firmware_updated": False,
+        "admin_password_changed": False,
+        "remote_admin_enabled": True,
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["overall_level"] == "critical"
+    assert any(item["title"] == "Réseau sans chiffrement" for item in data["findings"])
+    assert "Aucun réseau n’a été scanné" in data["disclaimer"]
+
+
+def test_wifi_audit_rejects_unknown_security_mode():
+    response = client.post("/v1/security/wifi-audit", json={
+        "authorization_confirmed": True,
+        "security_mode": "crack-me",
+    })
+    assert response.status_code == 422
+
+
