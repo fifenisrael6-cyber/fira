@@ -29,7 +29,7 @@ class WifiAuditService {
     final data = jsonDecode(response.body);
     if (response.statusCode != 200 || data is! Map<String, dynamic>) {
       final detail = data is Map<String, dynamic> ? data['detail'] : null;
-      throw Exception(detail is String ? detail : 'Échec de l’audit Wi-Fi (' + response.statusCode.toString() + ').');
+      throw Exception(detail is String ? detail : 'Échec de l’audit Wi-Fi (${response.statusCode}).');
     }
     return WifiAuditResult.fromJson(data);
   }
