@@ -40,3 +40,7 @@ PYTHONPATH=. pytest -q
 
 ## Current agent limits
 Autonomy is high for planning and software guidance. The current version does not execute shell commands, modify repositories, or deploy applications. Sensitive actions require explicit approval. A future code-execution worker must be separately isolated and resource-limited before it can be enabled.
+
+## Deploy the engine on Render
+
+The repository includes a `render.yaml` blueprint. In Render, create a new Blueprint from this repository and add your provider key as the secret value for `FIRA_API_KEY`. Do not add the key to GitHub files or to the mobile app. Once the service is live, copy its HTTPS URL into FIRA > Réglages. The free hosting tier, if selected, may sleep when idle and respond slowly on its first request.
