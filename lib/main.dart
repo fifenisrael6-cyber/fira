@@ -59,7 +59,7 @@ class _FiraHomeState extends State<FiraHome> {
       final String answer;
       if (video != null) {
         final lesson = await _youtube.analyze(serverUrl: _server, youtubeUrl: video.group(0)!);
-        answer = 'Voici mon analyse de la vidéo ${lesson.videoId} :\\n\\n${lesson.analysis}';
+        answer = 'Voici mon analyse de la vidéo ${lesson.videoId} :\n\n${lesson.analysis}';
       } else {
         final history = _messages.take(_messages.length - 1).toList().reversed.take(20).toList().reversed
           .map((m) => <String, String>{'role': m.user ? 'user' : 'assistant', 'content': m.text}).toList();
