@@ -163,6 +163,68 @@ async def security_audit_plan(request: AuditPlanRequest) -> dict[str, str]:
     return {"plan": plan, "execution_performed": "false"}
 
 
+
+class WifiAuditRequest(BaseModel):
+    authorization_confirmed: bool = False
+    security_mode: Literal["wpa3", "wpa2-aes", "wpa2-tkip", "wep", "open", "unknown"]
+    wps_enabled: bool | None = None
+    firmware_updated: bool | None = None
+    admin_password_changed: bool | None = None
+    remote_admin_enabled: bool | None = None
+    guest_network_enabled: bool | None = None
+    iot_network_separated: bool | None = None
+
+
+def assess_wifi_configuration(request: WifiAuditRequest) -> dict[str, object]:
+    findings: list[dict[str, str]] = []
+
+    def add(level: str, title: str, recommendation: str) -> None:
+        findings.append({"level": level, "title": title, "recommendation": recommendation})
+
+    if request.security_mode == "open":
+        add("critical", "Réseau sans chiffrement", "Activez WPA3-Personal ou WPA2-AES avec un mot de passe long et unique.")
+    elif request.security_mode in {"wep", "wpa2-tkip"}:
+        add("high", "Chiffrement obsolète", "Remplacez WEP/TKIP par WPA3-Personal ou WPA2-AES.")
+    elif request.security_mode == "unknown":
+        add("medium", "Mode de sécurité non confirmé", "Vérifiez le mode de sécurité dans l’interface officielle du routeur.")
+    elif request.security_mode == "wpa2-aes":
+        add("low", "WPA2-AES détecté", "Envisagez WPA3 si tous vos appareils le prennent en charge.")
+    if request.wps_enabled is True:
+        add("medium", "WPS activé", "Désactivez WPS si vous n’en avez pas besoin.")
+    elif request.wps_enabled is None:
+        add("info", "WPS non vérifié", "Vérifiez l’état de WPS dans les paramètres du routeur.")
+    if request.firmware_updated is False:
+        add("high", "Micrologiciel non à jour", "Consultez le fabricant et installez la mise à jour officielle stable.")
+    elif request.firmware_updated is None:
+        add("medium", "Micrologiciel non vérifié", "Vérifiez la version et les mises à jour sur le site officiel du fabricant.")
+    if request.admin_password_changed is False:
+        add("high", "Mot de passe administrateur par défaut", "Remplacez-le par une phrase secrète unique. Ne la communiquez jamais à FIRA.")
+    elif request.admin_password_changed is None:
+        add("medium", "Mot de passe administrateur non vérifié", "Confirmez localement qu’il ne s’agit plus du mot de passe par défaut.")
+    if request.remote_admin_enabled is True:
+        add("high", "Administration distante activée", "Désactivez l’administration depuis Internet sauf besoin documenté et protection appropriée.")
+    elif request.remote_admin_enabled is None:
+        add("info", "Administration distante non vérifiée", "Vérifiez que la gestion du routeur n’est pas exposée à Internet.")
+    if request.guest_network_enabled is False:
+        add("low", "Réseau invité absent", "Créez un réseau invité séparé pour les visiteurs si le routeur le permet.")
+    if request.iot_network_separated is False:
+        add("medium", "Objets connectés non isolés", "Placez les objets connectés sur un réseau invité ou un segment séparé si possible.")
+    if not findings:
+        add("info", "Aucun problème évident dans les réponses", "Cette vérification déclarative ne remplace pas un audit technique du routeur.")
+    rank = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
+    highest = max((rank[item["level"]] for item in findings), default=0)
+    overall = next((name for name, score in rank.items() if score == highest), "info")
+    return {"overall_level": overall, "findings": findings,
+            "disclaimer": "Évaluation basée uniquement sur les réponses saisies. Aucun réseau n’a été scanné, contacté ou modifié."}
+
+
+@app.post("/v1/security/wifi-audit")
+async def wifi_configuration_audit(request: WifiAuditRequest) -> dict[str, object]:
+    if not request.authorization_confirmed:
+        raise HTTPException(status_code=403, detail="Confirmez que vous êtes autorisé à administrer ce routeur.")
+    return assess_wifi_configuration(request)
+
+
 @app.post("/v1/learn/youtube")
 async def learn_youtube(request: YouTubeLearnRequest) -> dict[str, str]:
     video_id = youtube_video_id(request.url)
