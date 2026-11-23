@@ -28,7 +28,7 @@ class YouTubeLearningService {
     final base = serverUrl.trim().replaceFirst(RegExp(r'/+$'), '');
     final uri = Uri.tryParse('$base/v1/learn/youtube');
     if (uri == null || !uri.hasAuthority ||
-        (uri.scheme != 'https' && uri.host != 'localhost' && uri.host != '10.0.2.2' && !uri.isLoopback)) {
+        (uri.scheme != 'https' && uri.host != 'localhost' && uri.host != '10.0.2.2' && uri.host != '127.0.0.1')) {
       throw const FormatException('Adresse du moteur FIRA invalide.');
     }
     final response = await _client.post(uri,
@@ -38,7 +38,7 @@ class YouTubeLearningService {
     final data = jsonDecode(response.body);
     if (response.statusCode != 200 || data is! Map<String, dynamic>) {
       final detail = data is Map<String, dynamic> ? data['detail'] : null;
-      throw Exception(detail is String ? detail : 'Échec de l’analyse YouTube (' + response.statusCode.toString() + ').');
+      throw Exception(detail is String ? detail : 'Échec de l’analyse YouTube (${response.statusCode}).');
     }
     return YouTubeLesson.fromJson(data);
   }
