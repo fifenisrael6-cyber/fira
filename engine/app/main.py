@@ -240,7 +240,7 @@ async def chat(request: ChatRequest) -> dict[str, str]:
             raise
         generated = neural_model.generate(request.message, max_tokens=60)
         return {
-            "answer": "FIRA — génération expérimentale depuis son réseau neuronal :\\n\\n"
+            "answer": "FIRA — génération expérimentale depuis son réseau neuronal :\n\n"
                       + generated
                       + "\n\n[Limite : ce modèle prédit des mots appris; il ne comprend pas encore réellement la question.]",
             "model": "fira-tiny-neural-experimental",
