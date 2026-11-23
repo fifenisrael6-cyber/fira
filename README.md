@@ -1,26 +1,42 @@
 # FIRA AI
 
-FIRA est une application mobile Flutter destinée à piloter un assistant de développement logiciel.
+FIRA is a Flutter mobile client and a Python AI gateway for software-development assistance.
 
-## Fondation 0.1.0
-- Interface mobile en français : Assistant, Projets, Historique et Réglages.
-- Profils prévus : autonomie élevée et sécurité sensible.
-- Service Python minimal avec endpoints de santé et de capacités.
-- GitHub Actions vérifie le code et compile l'APK Android.
+## Current features
+- Flutter app in French: Assistant, Projects, History, Settings.
+- The Assistant calls the Python API at `POST /v1/chat`.
+- The server URL is saved locally on the device.
+- The Python gateway supports OpenAI-compatible chat-completions providers.
+- Provider credentials are read only from server environment variables.
+- Dockerfile and CI checks for Flutter, Python, and Android APK builds.
 
-**Limite actuelle :** aucun modèle IA n'est encore connecté. L'écran Assistant affiche une réponse de démonstration, pas une réponse produite par un modèle. Ne placez aucune clé API ou aucun secret dans le dépôt.
+## Configure the AI provider
+Set these variables on the server hosting the Python engine:
 
-## Structure
-- `lib/` : application Flutter.
-- `engine/` : API Python et contrat de sécurité de l'agent.
-- `.github/workflows/` : intégration continue et compilation APK.
+- `FIRA_API_KEY`: secret key from your chosen AI provider.
+- `FIRA_BASE_URL`: provider API base URL (default: `https://api.openai.com/v1`).
+- `FIRA_MODEL`: model supported by that provider (default: `gpt-4o-mini`).
 
-## Compiler
+Never put a real API key in Flutter code, the APK, or this repository. The default provider/model are examples; access and billing depend on the provider account.
+
+## Run the engine
 ```bash
-flutter pub get
-flutter analyze
-flutter test
-flutter build apk --release
+cd engine
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-L'autonomie élevée autorisera la planification multi-étapes et la vérification des résultats. Les actions sensibles (suppression, publication, déploiement, accès aux secrets) devront demander une validation explicite et s'exécuter dans un environnement isolé.
+For a public deployment, use HTTPS and configure secrets in the hosting platform. Enter the resulting HTTPS base URL in FIRA > Réglages.
+
+## Run engine tests
+```bash
+cd engine
+pip install -r requirements.txt
+pip install pytest
+PYTHONPATH=. pytest -q
+```
+
+## Current agent limits
+Autonomy is high for planning and software guidance. The current version does not execute shell commands, modify repositories, or deploy applications. Sensitive actions require explicit approval. A future code-execution worker must be separately isolated and resource-limited before it can be enabled.
