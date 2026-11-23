@@ -149,3 +149,37 @@ def test_generate_rejects_untrained_model(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "language_model", NGramLanguageModel(tmp_path / "empty.json"))
     response = client.post("/v1/learn/generate", json={"max_tokens": 10})
     assert response.status_code == 409
+
+
+def test_neural_training_requires_permission():
+    response = client.post("/v1/learn/neural/train", json={
+        "text": "FIRA apprend progressivement le langage et le code avec un petit réseau neuronal."
+    })
+    assert response.status_code == 403
+
+
+def test_neural_model_train_generate_and_reload(tmp_path, monkeypatch):
+    from app.neural_learning import TinyNeuralLanguageModel
+    model = TinyNeuralLanguageModel(tmp_path / "tiny.npz", embedding_size=8)
+    monkeypatch.setattr(main, "neural_model", model)
+    text = ("FIRA apprend le langage. FIRA apprend le code. "
+            "Le réseau neuronal prédit le prochain mot. " * 8)
+    trained = client.post("/v1/learn/neural/train", json={
+        "authorization_confirmed": True, "text": text, "epochs": 2
+    })
+    assert trained.status_code == 200
+    assert trained.json()["model"]["final_loss"] > 0
+    generated = client.post("/v1/learn/neural/generate", json={
+        "seed_text": "FIRA apprend", "max_tokens": 8, "seed": 3
+    })
+    assert generated.status_code == 200
+    assert generated.json()["text"]
+    restored = TinyNeuralLanguageModel(tmp_path / "tiny.npz")
+    assert restored.status()["trained"] is True
+
+
+def test_neural_generation_requires_training(tmp_path, monkeypatch):
+    from app.neural_learning import TinyNeuralLanguageModel
+    monkeypatch.setattr(main, "neural_model", TinyNeuralLanguageModel(tmp_path / "empty.npz"))
+    response = client.post("/v1/learn/neural/generate", json={"max_tokens": 8})
+    assert response.status_code == 409
