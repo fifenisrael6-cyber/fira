@@ -30,7 +30,7 @@ class _FiraHomeState extends State<FiraHome> {
   String _server = '';
   bool _loading = false;
   bool _settingsReady = false;
-  int _tab = 0;
+  final _youtube = YouTubeLearningService();
 
   @override
   void initState() { super.initState(); _loadServer(); }
@@ -52,12 +52,19 @@ class _FiraHomeState extends State<FiraHome> {
   Future<void> _send([String? prompt]) async {
     final value = (prompt ?? _input.text).trim();
     if (value.isEmpty || _loading) return;
-    setState(() { _messages.add(_Message(value, true)); _loading = true; _tab = 0; });
+    setState(() { _messages.add(_Message(value, true)); _loading = true; });
     _input.clear();
     try {
-      final history = _messages.take(_messages.length - 1).toList().reversed.take(20).toList().reversed
-        .map((m) => <String, String>{'role': m.user ? 'user' : 'assistant', 'content': m.text}).toList();
-      final answer = await _api.sendMessage(baseUrl: _server, message: value, history: history);
+      final video = RegExp(r'https?://(?:www\\.)?(?:youtube\\.com/watch\\?v=|youtu\\.be/)[\\w-]{11}').firstMatch(value);
+      final String answer;
+      if (video != null) {
+        final lesson = await _youtube.analyze(serverUrl: _server, youtubeUrl: video.group(0)!);
+        answer = 'Voici mon analyse de la vidéo ${lesson.videoId} :\\n\\n${lesson.analysis}';
+      } else {
+        final history = _messages.take(_messages.length - 1).toList().reversed.take(20).toList().reversed
+          .map((m) => <String, String>{'role': m.user ? 'user' : 'assistant', 'content': m.text}).toList();
+        answer = await _api.sendMessage(baseUrl: _server, message: value, history: history);
+      }
       if (mounted) setState(() => _messages.add(_Message(answer, false)));
     } on FiraApiException catch (e) {
       if (mounted) setState(() => _messages.add(_Message('Connexion impossible : ${e.message}', false)));
@@ -66,34 +73,40 @@ class _FiraHomeState extends State<FiraHome> {
     } finally { if (mounted) setState(() => _loading = false); }
   }
 
-  @override
-  void dispose() { _api.close(); _input.dispose(); super.dispose(); }
+  Future<void> _openSettings() async {
+    await showDialog<void>(context: context, builder: (context) => Dialog(
+      child: SizedBox(width: 420, height: 560,
+        child: _Settings(server: _server, ready: _settingsReady, onSave: (value) {
+          _saveServer(value);
+          Navigator.of(context).pop();
+        }),
+      ),
+    ));
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final pages = [_assistant(), const _Projects(), const _History(),
-      _Settings(server: _server, ready: _settingsReady, onSave: _saveServer),
-      _YouTubeLearningPage(server: _server)];
-    return Scaffold(
-      appBar: AppBar(title: const Row(children: [
-        Icon(Icons.auto_awesome, color: Color(0xFF7867F5), size: 28), SizedBox(width: 10),
+  void dispose() { _api.close(); _youtube.close(); _input.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Row(children: [
+        Icon(Icons.auto_awesome, color: Color(0xFF7867F5), size: 28),
+        SizedBox(width: 10),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('FIRA AI', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-          Text('Votre atelier de développement', style: TextStyle(fontSize: 11, color: Color(0xFF778096))),
+          Text('Assistant intelligent · Python · Dart · Réseau',
+            style: TextStyle(fontSize: 10, color: Color(0xFF778096))),
         ]),
-      ]), actions: [IconButton(onPressed: _loading ? null : () => setState(() => _messages.clear()),
-        icon: const Icon(Icons.add_comment_outlined), tooltip: 'Nouvelle conversation')]),
-      body: SafeArea(child: pages[_tab]),
-      bottomNavigationBar: NavigationBar(selectedIndex: _tab, onDestinationSelected: (v) => setState(() => _tab = v),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), label: 'Assistant'),
-          NavigationDestination(icon: Icon(Icons.folder_outlined), label: 'Projets'),
-          NavigationDestination(icon: Icon(Icons.history), label: 'Historique'),
-          NavigationDestination(icon: Icon(Icons.tune), label: 'Réglages'),
-          NavigationDestination(icon: Icon(Icons.ondemand_video_outlined), label: 'YouTube'),
-        ]),
-    );
-  }
+      ]),
+      actions: [
+        IconButton(onPressed: _loading ? null : () => setState(() => _messages.clear()),
+          icon: const Icon(Icons.add_comment_outlined), tooltip: 'Nouvelle conversation'),
+        IconButton(onPressed: _openSettings, icon: const Icon(Icons.tune), tooltip: 'Réglages'),
+      ],
+    ),
+    body: SafeArea(child: _assistant()),
+  );
 
   Widget _assistant() => Column(children: [
     Expanded(child: _messages.isEmpty
