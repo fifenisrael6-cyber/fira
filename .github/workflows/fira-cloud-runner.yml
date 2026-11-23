@@ -1,0 +1,86 @@
+name: FIRA Cloud VM tasks
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Approved task to execute on the isolated FIRA cloud worker
+        required: true
+        type: choice
+        options:
+          - full-validation
+          - android-release
+          - python-tests
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fira-cloud-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cloud-task:
+    if: github.ref == 'refs/heads/main'
+    environment: fira-cloud-approval
+    runs-on: [self-hosted, linux, x64, fira-cloud]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout protected main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up Python
+        if: inputs.task == 'full-validation' || inputs.task == 'python-tests'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: engine/requirements.txt
+
+      - name: Install Python dependencies
+        if: inputs.task == 'full-validation' || inputs.task == 'python-tests'
+        working-directory: engine
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run Python tests
+        if: inputs.task == 'full-validation' || inputs.task == 'python-tests'
+        working-directory: engine
+        run: PYTHONPATH=. pytest -q
+
+      - name: Set up Flutter
+        if: inputs.task == 'full-validation' || inputs.task == 'android-release'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        if: inputs.task == 'full-validation' || inputs.task == 'android-release'
+        run: flutter pub get
+
+      - name: Analyze Flutter
+        if: inputs.task == 'full-validation'
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        if: inputs.task == 'full-validation'
+        run: flutter test
+
+      - name: Build Android release APK
+        if: inputs.task == 'full-validation' || inputs.task == 'android-release'
+        run: flutter build apk --release
+
+      - name: Upload Android APK
+        if: inputs.task == 'full-validation' || inputs.task == 'android-release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fira-cloud-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
