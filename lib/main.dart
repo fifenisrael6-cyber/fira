@@ -144,8 +144,16 @@ class _FiraHomeState extends State<FiraHome> {
         ])
       : ListView.builder(padding: const EdgeInsets.all(16), itemCount: _messages.length + (_loading ? 1 : 0),
           itemBuilder: (context, i) {
-            if (_loading && i == _messages.length) return const Padding(padding: EdgeInsets.all(12),
-              child: Row(children: [SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 10), Text('FIRA réfléchit…')]));
+            if (_loading && i == _messages.length) {
+              return const Padding(
+                padding: EdgeInsets.all(12),
+                child: Row(children: [
+                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(width: 10),
+                  Text('FIRA réfléchit…'),
+                ]),
+              );
+            }
             final m = _messages[i];
             return Align(alignment: m.user ? Alignment.centerRight : Alignment.centerLeft,
               child: Container(constraints: const BoxConstraints(maxWidth: 340), margin: const EdgeInsets.only(bottom: 10),
