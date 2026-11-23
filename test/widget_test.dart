@@ -7,25 +7,19 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('FIRA opens the assistant home screen', (tester) async {
+  testWidgets('FIRA opens as a single conversational assistant', (tester) async {
     await tester.pumpWidget(const FiraApp());
     await tester.pumpAndSettle();
     expect(find.text('FIRA AI'), findsOneWidget);
     expect(find.text('Que souhaitez-vous\nconstruire aujourd’hui ?'), findsOneWidget);
+    expect(find.text('Écrivez à FIRA…'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
   });
 
-  testWidgets('Projects and engine settings are accessible', (tester) async {
+  testWidgets('Engine settings are accessible from the chat header', (tester) async {
     await tester.pumpWidget(const FiraApp());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Projets'));
-    await tester.pumpAndSettle();
-    expect(find.text('Mes projets'), findsOneWidget);
-    expect(find.text('Moteur IA'), findsOneWidget);
-    await tester.tap(find.text('YouTube'));
-    await tester.pumpAndSettle();
-    expect(find.text('Apprendre avec YouTube'), findsOneWidget);
-    expect(find.text('Analyser la vidéo'), findsOneWidget);
-    await tester.tap(find.text('Réglages'));
+    await tester.tap(find.byTooltip('Réglages'));
     await tester.pumpAndSettle();
     expect(find.text('Connexion au moteur IA'), findsOneWidget);
     expect(find.text('Enregistrer le serveur'), findsOneWidget);
