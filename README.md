@@ -1,17 +1,26 @@
-# fira
+# FIRA AI
 
-A new Flutter project.
+FIRA est une application mobile Flutter destinée à piloter un assistant de développement logiciel.
 
-## Getting Started
+## Fondation 0.1.0
+- Interface mobile en français : Assistant, Projets, Historique et Réglages.
+- Profils prévus : autonomie élevée et sécurité sensible.
+- Service Python minimal avec endpoints de santé et de capacités.
+- GitHub Actions vérifie le code et compile l'APK Android.
 
-This project is a starting point for a Flutter application.
+**Limite actuelle :** aucun modèle IA n'est encore connecté. L'écran Assistant affiche une réponse de démonstration, pas une réponse produite par un modèle. Ne placez aucune clé API ou aucun secret dans le dépôt.
 
-A few resources to get you started if this is your first Flutter project:
+## Structure
+- `lib/` : application Flutter.
+- `engine/` : API Python et contrat de sécurité de l'agent.
+- `.github/workflows/` : intégration continue et compilation APK.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Compiler
+```bash
+flutter pub get
+flutter analyze
+flutter test
+flutter build apk --release
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+L'autonomie élevée autorisera la planification multi-étapes et la vérification des résultats. Les actions sensibles (suppression, publication, déploiement, accès aux secrets) devront demander une validation explicite et s'exécuter dans un environnement isolé.
