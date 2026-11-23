@@ -112,7 +112,7 @@ async def ask_local_model(messages: list[dict[str, str]]) -> str:
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "service": "fira-engine", "version": "0.4.0"}
+    return {"status": "ok", "service": "fira-engine", "version": "0.5.0"}
 
 
 @app.get("/v1/capabilities")
@@ -242,7 +242,7 @@ async def chat(request: ChatRequest) -> dict[str, str]:
         return {
             "answer": "FIRA — génération expérimentale depuis son réseau neuronal :\\n\\n"
                       + generated
-                      + "\\n\\n[Limite : ce modèle prédit des mots appris; il ne comprend pas encore réellement la question.]",
+                      + "\n\n[Limite : ce modèle prédit des mots appris; il ne comprend pas encore réellement la question.]",
             "model": "fira-tiny-neural-experimental",
         }
 
