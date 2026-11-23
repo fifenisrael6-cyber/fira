@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/fira_api.dart';
+import 'services/youtube_learning.dart';
 
 void main() => runApp(const FiraApp());
 
@@ -71,7 +72,8 @@ class _FiraHomeState extends State<FiraHome> {
   @override
   Widget build(BuildContext context) {
     final pages = [_assistant(), const _Projects(), const _History(),
-      _Settings(server: _server, ready: _settingsReady, onSave: _saveServer)];
+      _Settings(server: _server, ready: _settingsReady, onSave: _saveServer),
+      _YouTubeLearningPage(server: _server)];
     return Scaffold(
       appBar: AppBar(title: const Row(children: [
         Icon(Icons.auto_awesome, color: Color(0xFF7867F5), size: 28), SizedBox(width: 10),
@@ -88,6 +90,7 @@ class _FiraHomeState extends State<FiraHome> {
           NavigationDestination(icon: Icon(Icons.folder_outlined), label: 'Projets'),
           NavigationDestination(icon: Icon(Icons.history), label: 'Historique'),
           NavigationDestination(icon: Icon(Icons.tune), label: 'Réglages'),
+          NavigationDestination(icon: Icon(Icons.ondemand_video_outlined), label: 'YouTube'),
         ]),
     );
   }
@@ -210,6 +213,129 @@ class _SettingsState extends State<_Settings> {
     FilledButton.icon(onPressed: widget.ready ? () => widget.onSave(_controller.text) : null,
       icon: const Icon(Icons.save_outlined), label: const Text('Enregistrer le serveur')),
     const SizedBox(height: 20),
-    const ListTile(leading: Icon(Icons.info_outline), title: Text('FIRA 0.2.0'), subtitle: Text('Moteur IA connectable')),
+    const ListTile(leading: Icon(Icons.info_outline), title: Text('FIRA 0.3.0'), subtitle: Text('Moteur IA local · apprentissage YouTube')),
   ]);
+}
+
+
+class _YouTubeLearningPage extends StatefulWidget {
+  const _YouTubeLearningPage({required this.server});
+  final String server;
+
+  @override
+  State<_YouTubeLearningPage> createState() => _YouTubeLearningPageState();
+}
+
+class _YouTubeLearningPageState extends State<_YouTubeLearningPage> {
+  final _urlController = TextEditingController();
+  final _objectiveController = TextEditingController(
+    text: 'Explique le tutoriel, les outils et les commandes, puis propose un exercice pratique sûr.',
+  );
+  final _service = YouTubeLearningService();
+  YouTubeLesson? _lesson;
+  String? _error;
+  bool _loading = false;
+
+  Future<void> _analyze() async {
+    final url = _urlController.text.trim();
+    if (url.isEmpty || _loading) return;
+    if (widget.server.trim().isEmpty) {
+      setState(() => _error = 'Configurez d’abord l’adresse du moteur FIRA dans Réglages.');
+      return;
+    }
+    setState(() { _loading = true; _error = null; _lesson = null; });
+    try {
+      final lesson = await _service.analyze(
+        serverUrl: widget.server,
+        youtubeUrl: url,
+        objective: _objectiveController.text.trim().isEmpty
+          ? 'Explique le tutoriel et propose un laboratoire défensif sûr.'
+          : _objectiveController.text.trim(),
+      );
+      if (mounted) setState(() => _lesson = lesson);
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    _objectiveController.dispose();
+    _service.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(18),
+    children: [
+      const Text('Apprendre avec YouTube',
+        style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 8),
+      const Text('Collez le lien d’une vidéo. FIRA récupère ses sous-titres accessibles et demande au modèle local de transformer le contenu en leçon.',
+        style: TextStyle(color: Color(0xFF778096), height: 1.45)),
+      const SizedBox(height: 18),
+      TextField(
+        controller: _urlController,
+        keyboardType: TextInputType.url,
+        decoration: const InputDecoration(
+          labelText: 'Lien de la vidéo YouTube',
+          hintText: 'https://www.youtube.com/watch?v=…',
+          prefixIcon: Icon(Icons.play_circle_outline),
+          border: OutlineInputBorder(),
+        ),
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _objectiveController,
+        minLines: 2,
+        maxLines: 4,
+        decoration: const InputDecoration(
+          labelText: 'Ce que vous voulez apprendre',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      const SizedBox(height: 14),
+      FilledButton.icon(
+        onPressed: _loading ? null : _analyze,
+        icon: _loading
+          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+          : const Icon(Icons.auto_awesome),
+        label: Text(_loading ? 'Analyse en cours…' : 'Analyser la vidéo'),
+      ),
+      const SizedBox(height: 12),
+      if (_error != null)
+        Card(
+          color: const Color(0xFFFFF1F0),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Text(_error!, style: const TextStyle(color: Color(0xFF9B2922))),
+          ),
+        ),
+      if (_lesson != null) ...[
+        Card(
+          color: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Leçon préparée par FIRA',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              Text('Vidéo : ${_lesson!.videoId} · ${_lesson!.transcriptChars} caractères de transcription',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF778096))),
+              const Divider(height: 24),
+              SelectableText(_lesson!.analysis,
+                style: const TextStyle(height: 1.5, color: Color(0xFF30384B))),
+            ]),
+          ),
+        ),
+      ],
+      const SizedBox(height: 10),
+      const Text('Limite actuelle : cette version analyse les sous-titres accessibles, pas directement les images ni le son des vidéos sans transcription.',
+        style: TextStyle(fontSize: 12, color: Color(0xFF778096), height: 1.4)),
+    ],
+  );
 }
