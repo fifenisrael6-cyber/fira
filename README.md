@@ -1,45 +1,56 @@
 # FIRA AI
 
-FIRA is a Flutter Android client with a Python engine designed for local-first AI learning and software assistance.
+FIRA is a Flutter client with a Python engine designed for local-first AI learning and software assistance.
 
 ## Architecture without an AI API key
 - No paid AI provider and no provider API key are required.
-- Python calls an OpenAI-compatible local model server (default: \`http://127.0.0.1:8081/v1\`).
-- Configure \`FIRA_LOCAL_MODEL_URL\` and \`FIRA_LOCAL_MODEL\`. The local model server must be installed and running; FIRA does not download a model automatically.
+- Python calls an OpenAI-compatible local model server (default: `http://127.0.0.1:8081/v1`).
+- Configure `FIRA_LOCAL_MODEL_URL` and `FIRA_LOCAL_MODEL`. The local model server must be installed and running; FIRA does not download a model automatically.
 - No AI secret is embedded in Dart or the APK.
-- YouTube endpoint: \`POST /v1/learn/youtube\`; it reads available public captions and asks the local model to summarize the lesson, explain commands and design a defensive exercise.
-- Dart client helper: \`lib/services/youtube_learning.dart\`.
+- YouTube endpoint: `POST /v1/learn/youtube`; it reads available captions and asks the local model to explain the lesson.
+- Dart client helper: `lib/services/youtube_learning.dart`.
 
 ## Run the Python engine
-\`\`\`bash
+```bash
 cd engine
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 FIRA_LOCAL_MODEL_URL=http://127.0.0.1:8081/v1 uvicorn app.main:app --host 0.0.0.0 --port 8000
-\`\`\`
-Run a compatible local inference server separately. For a model on another computer on the same trusted Wi-Fi, set its LAN address instead of 127.0.0.1. Android local inference may require a quantized model and substantial RAM/storage.
+```
+Run a compatible local inference server separately. Android local inference may require a quantized model and substantial RAM/storage.
 
 ## YouTube learning workflow
-1. Submit a public YouTube URL.
+1. Submit a public YouTube URL in the FIRA chat.
 2. Python validates the YouTube host and fetches available captions/transcript.
 3. The transcript is treated as untrusted material and bounded in size.
-4. The local model returns a summary, explanations, prerequisites, risks and a defensive lab exercise.
-5. Review the exercise before running anything.
+4. The local model returns a summary, explanations, prerequisites, risks and a defensive exercise.
 
-Videos without accessible captions cannot be transcribed by this endpoint. This does not bypass private videos, paywalls or access controls.
+Videos without accessible captions cannot be transcribed by this endpoint. This does not bypass private videos, paywalls or access controls. The current feature analyzes captions; it does not visually watch or listen to the video itself.
 
-## Network security learning
-FIRA can teach network concepts and help assess devices you own or are authorized to test. Begin with passive discovery, configuration review and non-destructive checks on a selected lab target. It must not automatically execute arbitrary commands extracted from a video or attack third-party systems. The current engine does not execute shell commands or run penetration tests; \`agent_execution_enabled\` remains false until an isolated, permissioned lab runner is implemented and tested.
+## Authorized security audit planning
+- `POST /v1/security/audit-plan` accepts a declared scope, optional asset labels, an objective, and an explicit authorization confirmation.
+- The endpoint produces a passive, non-destructive audit plan through the configured local model.
+- If authorization is not confirmed, the endpoint rejects the request.
+- This endpoint does not connect to targets, scan ports, exploit vulnerabilities, execute shell commands, or prove ownership/authorization.
+- The chat can explain defensive security concepts and review user-provided code, configuration, and logs. Active penetration testing is not implemented.
+- `active_scanning_enabled` and `agent_execution_enabled` remain false.
 
 ## Android / Dart
-Configure the FIRA engine URL in app settings. Use HTTPS for remote access. Local-network HTTP may require Android network-security configuration for development. The Dart YouTube service sends the video URL and learning objective to the FIRA engine.
+Configure the FIRA engine URL in app settings. Use HTTPS for remote access. The Dart YouTube service sends the video URL and learning objective to the FIRA engine.
 
 ## Tests
-\`\`\`bash
+```bash
 cd engine
 pip install -r requirements.txt
 pip install pytest
 PYTHONPATH=. pytest -q
-\`\`\`
+```
 A successful Git commit does not mean the APK has compiled; verify GitHub Actions for the actual result.
+
+## Wi-Fi configuration audit
+- The mobile Wi-Fi screen is available from the Wi-Fi icon in the app bar.
+- `POST /v1/security/wifi-audit` evaluates a router configuration declared by an authorized administrator: encryption mode, WPS, firmware status, admin password status, remote administration, guest network, and IoT isolation.
+- It returns prioritized findings and remediation recommendations without collecting passwords or other secrets.
+- This is a questionnaire-based configuration review. It does not scan nearby networks, connect to a router, capture traffic, guess passwords, or change settings.
+- Confirm authorization before submitting an assessment. The report is based only on the answers supplied and is not a certification.
