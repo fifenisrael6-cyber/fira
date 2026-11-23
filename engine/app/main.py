@@ -8,7 +8,9 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from youtube_transcript_api import YouTubeTranscriptApi
 
-app = FastAPI(title="FIRA Engine", version="0.4.0")
+from app.learning_engine import language_model
+
+app = FastAPI(title="FIRA Engine", version="0.5.0")
 
 SYSTEM_PROMPT = """You are FIRA, a French-first software, Python, Dart/Flutter and cybersecurity learning assistant.
 Teach Python and Dart progressively, review code, debug errors, and design tests.
@@ -115,14 +117,63 @@ async def health() -> dict[str, str]:
 @app.get("/v1/capabilities")
 async def capabilities() -> dict[str, object]:
     return {
-        "model_connected": True,
-        "provider_mode": "local-first-no-api-key",
+        "model_connected": False,
+        "provider_mode": "from-scratch-no-external-ai",
+        "learning_engine": language_model.status(),
         "autonomy_profile": "high",
         "security_profile": "defensive-authorized-audits",
         "youtube_learning": True,
         "security_audit_planning": True,
         "active_scanning_enabled": False,
         "agent_execution_enabled": False,
+    }
+
+
+
+
+class TrainRequest(BaseModel):
+    text: str = Field(min_length=20, max_length=100000)
+    source_label: str = Field(default="texte fourni par l'utilisateur", max_length=120)
+    authorization_confirmed: bool = False
+
+
+class GenerateRequest(BaseModel):
+    seed_text: str = Field(default="", max_length=2000)
+    max_tokens: int = Field(default=60, ge=1, le=200)
+    seed: int | None = None
+
+
+@app.get("/v1/learn/status")
+async def learning_status() -> dict[str, object]:
+    return language_model.status()
+
+
+@app.post("/v1/learn/train")
+async def train_language_model(request: TrainRequest) -> dict[str, object]:
+    if not request.authorization_confirmed:
+        raise HTTPException(status_code=403, detail="Confirmez que vous avez le droit d'utiliser ce texte pour entraîner FIRA.")
+    try:
+        result = language_model.train(request.text)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {
+        "status": "trained",
+        "source_label": request.source_label,
+        "model": result,
+        "notice": "Prototype statistique entraîné depuis zéro. Il apprend des enchaînements de mots, pas encore le sens ni le raisonnement.",
+    }
+
+
+@app.post("/v1/learn/generate")
+async def generate_text(request: GenerateRequest) -> dict[str, object]:
+    try:
+        result = language_model.generate(request.seed_text, request.max_tokens, request.seed)
+    except RuntimeError as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    return {
+        "text": result,
+        "model": language_model.status(),
+        "notice": "Génération expérimentale par probabilités de mots; ce résultat n'est pas une réponse fiable de type assistant.",
     }
 
 
