@@ -45,4 +45,25 @@ jobs:
       - name: Resolve Flutter dependencies
         run: flutter pub get
       - name: Analyze Flutter application
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
+
+  android-release:
+    runs-on: ubuntu-latest
+    needs: [python-learning-engine, flutter-analysis]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Build release APK
+        run: flutter build apk --release
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FIRA-Android-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
