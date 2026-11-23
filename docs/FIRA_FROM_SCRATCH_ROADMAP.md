@@ -23,7 +23,7 @@ A ChatGPT-class system requires large curated datasets, substantial compute, eva
 
 Only train on material you created, have permission to use, or that is appropriately licensed. Never submit passwords, API keys, private records or sensitive personal data.
 
-## Multi-year roadmap
+## Tiny neural model added in this iteration\n\nA small trainable word-level neural bigram model is implemented in `engine/app/neural_learning.py` using NumPy. Its embedding table and output layer start from random values, are updated with cross-entropy gradients, and are saved to a compressed NPZ checkpoint. The API exposes `/v1/learn/neural/status`, `/v1/learn/neural/train`, and `/v1/learn/neural/generate`. The Flutter app has an `Apprentissage FIRA` screen to submit permitted text, select 1–10 epochs, inspect basic metrics, and test a short continuation.\n\nThis tiny model only predicts a next word from a one-word context. It is not a chatbot or reasoning system. The existing chat can use it only as a clearly labelled experimental fallback if the separate local inference service is unavailable and the neural model has been trained.\n\n## Multi-year roadmap
 1. Baseline: tokenizer, n-gram model, persistence, API and tests.
 2. Data discipline: curated French/Python/Dart corpora, provenance and licence records, deduplication, held-out validation, quality and memorization checks.
 3. Neural foundations: tokenizer, embeddings, attention and a tiny decoder-only Transformer trained on small permitted datasets.
