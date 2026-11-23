@@ -1,3 +1,6 @@
+// Flutter 3.50 marks the Material library as deprecated; FIRA still targets
+// Flutter's Material widgets until the replacement API is available in its SDK.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/fira_api.dart';
@@ -37,7 +40,12 @@ class _FiraHomeState extends State<FiraHome> {
 
   Future<void> _loadServer() async {
     final prefs = await SharedPreferences.getInstance();
-    if (mounted) setState(() { _server = prefs.getString('fira_server_url') ?? ''; _settingsReady = true; });
+    if (mounted) {
+      setState(() {
+        _server = prefs.getString('fira_server_url') ?? '';
+        _settingsReady = true;
+      });
+    }
   }
 
   Future<void> _saveServer(String value) async {
@@ -65,12 +73,22 @@ class _FiraHomeState extends State<FiraHome> {
           .map((m) => <String, String>{'role': m.user ? 'user' : 'assistant', 'content': m.text}).toList();
         answer = await _api.sendMessage(baseUrl: _server, message: value, history: history);
       }
-      if (mounted) setState(() => _messages.add(_Message(answer, false)));
+      if (mounted) {
+        setState(() => _messages.add(_Message(answer, false)));
+      }
     } on FiraApiException catch (e) {
-      if (mounted) setState(() => _messages.add(_Message('Connexion impossible : ${e.message}', false)));
+      if (mounted) {
+        setState(() => _messages.add(_Message('Connexion impossible : ${e.message}', false)));
+      }
     } catch (_) {
-      if (mounted) setState(() => _messages.add(const _Message('Erreur inattendue. Vérifiez le serveur et réessayez.', false)));
-    } finally { if (mounted) setState(() => _loading = false); }
+      if (mounted) {
+        setState(() => _messages.add(const _Message('Erreur inattendue. Vérifiez le serveur et réessayez.', false)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   Future<void> _openSettings() async {
@@ -166,6 +184,8 @@ class _Suggestion extends StatelessWidget {
       subtitle: Text(subtitle, style: const TextStyle(fontSize: 12))));
 }
 
+// Kept for the planned project workspace; not yet routed from the chat UI.
+// ignore: unused_element
 class _Projects extends StatelessWidget {
   const _Projects();
   @override
@@ -186,6 +206,8 @@ class _ProjectTile extends StatelessWidget {
     child: ListTile(leading: Icon(icon, color: const Color(0xFF7867F5)), title: Text(title), subtitle: Text(detail)));
 }
 
+// Kept for the planned session-history view; not yet routed from the chat UI.
+// ignore: unused_element
 class _History extends StatelessWidget {
   const _History();
   @override
