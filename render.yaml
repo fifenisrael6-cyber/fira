@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: fira-engine
+    runtime: docker
+    rootDir: engine
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: FIRA_API_KEY
+        sync: false
+      - key: FIRA_BASE_URL
+        value: https://api.openai.com/v1
+      - key: FIRA_MODEL
+        value: gpt-4o-mini
