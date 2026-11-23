@@ -1,0 +1,39 @@
+services:
+  fira-engine:
+    build:
+      context: ../../engine
+      dockerfile: Dockerfile
+    image: fira-engine:local
+    container_name: fira-engine
+    restart: unless-stopped
+    init: true
+    ports:
+      # Deliberately loopback-only. Tailscale Serve is the only remote entry point.
+      - "127.0.0.1:8000:8000"
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      FIRA_MODEL_PATH: /app/data/fira_ngram_model.json
+      FIRA_NEURAL_MODEL_PATH: /app/data/fira_tiny_neural.npz
+    volumes:
+      - fira-model-data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  fira-model-data:
