@@ -47,3 +47,10 @@ pip install pytest
 PYTHONPATH=. pytest -q
 ```
 A successful Git commit does not mean the APK has compiled; verify GitHub Actions for the actual result.
+
+## Wi-Fi configuration audit
+- The mobile Wi-Fi screen is available from the Wi-Fi icon in the app bar.
+- `POST /v1/security/wifi-audit` evaluates a router configuration declared by an authorized administrator: encryption mode, WPS, firmware status, admin password status, remote administration, guest network, and IoT isolation.
+- It returns prioritized findings and remediation recommendations without collecting passwords or other secrets.
+- This is a questionnaire-based configuration review. It does not scan nearby networks, connect to a router, capture traffic, guess passwords, or change settings.
+- Confirm authorization before submitting an assessment. The report is based only on the answers supplied and is not a certification.
