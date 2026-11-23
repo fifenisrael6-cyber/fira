@@ -18,7 +18,8 @@ def test_capabilities_keep_active_execution_disabled():
     assert data["agent_execution_enabled"] is False
     assert data["youtube_learning"] is True
     assert data["security_audit_planning"] is True
-    assert data["provider_mode"] == "local-first-no-api-key"
+    assert data["model_connected"] is False
+    assert data["provider_mode"] == "from-scratch-no-external-ai"
 
 
 def test_chat_uses_local_model_without_provider_key(monkeypatch):
