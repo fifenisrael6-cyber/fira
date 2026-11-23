@@ -7,7 +7,6 @@ class FiraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const ink = Color(0xFF101827);
     const violet = Color(0xFF7867F5);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
