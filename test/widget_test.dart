@@ -4,15 +4,21 @@ import 'package:fira/main.dart';
 void main() {
   testWidgets('FIRA opens the assistant home screen', (tester) async {
     await tester.pumpWidget(const FiraApp());
+    await tester.pumpAndSettle();
     expect(find.text('FIRA AI'), findsOneWidget);
     expect(find.text('Que souhaitez-vous\nconstruire aujourd’hui ?'), findsOneWidget);
   });
 
-  testWidgets('Projects tab is accessible', (tester) async {
+  testWidgets('Projects and engine settings are accessible', (tester) async {
     await tester.pumpWidget(const FiraApp());
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Projets'));
     await tester.pumpAndSettle();
     expect(find.text('Mes projets'), findsOneWidget);
     expect(find.text('Moteur IA'), findsOneWidget);
+    await tester.tap(find.text('Réglages'));
+    await tester.pumpAndSettle();
+    expect(find.text('Connexion au moteur IA'), findsOneWidget);
+    expect(find.text('Enregistrer le serveur'), findsOneWidget);
   });
 }
