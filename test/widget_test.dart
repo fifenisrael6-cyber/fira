@@ -21,6 +21,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Mes projets'), findsOneWidget);
     expect(find.text('Moteur IA'), findsOneWidget);
+    await tester.tap(find.text('YouTube'));
+    await tester.pumpAndSettle();
+    expect(find.text('Apprendre avec YouTube'), findsOneWidget);
+    expect(find.text('Analyser la vidéo'), findsOneWidget);
     await tester.tap(find.text('Réglages'));
     await tester.pumpAndSettle();
     expect(find.text('Connexion au moteur IA'), findsOneWidget);
