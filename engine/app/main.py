@@ -8,7 +8,10 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from youtube_transcript_api import YouTubeTranscriptApi
 
-app = FastAPI(title="FIRA Engine", version="0.4.0")
+from app.learning_engine import language_model
+from app.neural_learning import neural_model
+
+app = FastAPI(title="FIRA Engine", version="0.5.0")
 
 SYSTEM_PROMPT = """You are FIRA, a French-first software, Python, Dart/Flutter and cybersecurity learning assistant.
 Teach Python and Dart progressively, review code, debug errors, and design tests.
@@ -109,14 +112,16 @@ async def ask_local_model(messages: list[dict[str, str]]) -> str:
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "service": "fira-engine", "version": "0.4.0"}
+    return {"status": "ok", "service": "fira-engine", "version": "0.5.0"}
 
 
 @app.get("/v1/capabilities")
 async def capabilities() -> dict[str, object]:
     return {
-        "model_connected": True,
-        "provider_mode": "local-first-no-api-key",
+        "model_connected": False,
+        "provider_mode": "from-scratch-no-external-ai",
+        "learning_engine": language_model.status(),
+        "neural_learning_engine": neural_model.status(),
         "autonomy_profile": "high",
         "security_profile": "defensive-authorized-audits",
         "youtube_learning": True,
@@ -126,15 +131,120 @@ async def capabilities() -> dict[str, object]:
     }
 
 
+
+
+class TrainRequest(BaseModel):
+    text: str = Field(min_length=20, max_length=100000)
+    source_label: str = Field(default="texte fourni par l'utilisateur", max_length=120)
+    authorization_confirmed: bool = False
+
+
+class GenerateRequest(BaseModel):
+    seed_text: str = Field(default="", max_length=2000)
+    max_tokens: int = Field(default=60, ge=1, le=200)
+    seed: int | None = None
+
+
+@app.get("/v1/learn/status")
+async def learning_status() -> dict[str, object]:
+    return language_model.status()
+
+
+@app.post("/v1/learn/train")
+async def train_language_model(request: TrainRequest) -> dict[str, object]:
+    if not request.authorization_confirmed:
+        raise HTTPException(status_code=403, detail="Confirmez que vous avez le droit d'utiliser ce texte pour entraîner FIRA.")
+    try:
+        result = language_model.train(request.text)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {
+        "status": "trained",
+        "source_label": request.source_label,
+        "model": result,
+        "notice": "Prototype statistique entraîné depuis zéro. Il apprend des enchaînements de mots, pas encore le sens ni le raisonnement.",
+    }
+
+
+@app.post("/v1/learn/generate")
+async def generate_text(request: GenerateRequest) -> dict[str, object]:
+    try:
+        result = language_model.generate(request.seed_text, request.max_tokens, request.seed)
+    except RuntimeError as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    return {
+        "text": result,
+        "model": language_model.status(),
+        "notice": "Génération expérimentale par probabilités de mots; ce résultat n'est pas une réponse fiable de type assistant.",
+    }
+
+
+
+
+
+class NeuralTrainRequest(BaseModel):
+    text: str = Field(min_length=40, max_length=100000)
+    authorization_confirmed: bool = False
+    epochs: int = Field(default=3, ge=1, le=10)
+
+
+class NeuralGenerateRequest(BaseModel):
+    seed_text: str = Field(default="", max_length=2000)
+    max_tokens: int = Field(default=40, ge=1, le=100)
+    seed: int | None = None
+
+
+@app.get("/v1/learn/neural/status")
+async def neural_learning_status() -> dict[str, object]:
+    return neural_model.status()
+
+
+@app.post("/v1/learn/neural/train")
+async def train_neural_model(request: NeuralTrainRequest) -> dict[str, object]:
+    if not request.authorization_confirmed:
+        raise HTTPException(status_code=403, detail="Confirmez que vous avez le droit d'utiliser ce texte pour entraîner FIRA.")
+    try:
+        result = neural_model.train(request.text, epochs=request.epochs)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error))
+    return {
+        "status": "trained",
+        "model": result,
+        "notice": "Petit réseau neuronal entraîné depuis une initialisation aléatoire. Il prédit le mot suivant et ne sait pas encore raisonner.",
+    }
+
+
+@app.post("/v1/learn/neural/generate")
+async def generate_neural_text(request: NeuralGenerateRequest) -> dict[str, object]:
+    try:
+        result = neural_model.generate(request.seed_text, request.max_tokens, request.seed)
+    except RuntimeError as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    return {
+        "text": result,
+        "model": neural_model.status(),
+        "notice": "Texte expérimental généré par le petit réseau neuronal FIRA; ce n'est pas une réponse conversationnelle fiable.",
+    }
+
+
 @app.post("/v1/chat")
 async def chat(request: ChatRequest) -> dict[str, str]:
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages.extend(item.model_dump() for item in request.history)
     messages.append({"role": "user", "content": request.message})
-    return {
-        "answer": await ask_local_model(messages),
-        "model": os.getenv("FIRA_LOCAL_MODEL", "local-model"),
-    }
+    try:
+        answer = await ask_local_model(messages)
+        return {"answer": answer, "model": os.getenv("FIRA_LOCAL_MODEL", "local-model")}
+    except HTTPException as error:
+        if error.status_code != 503 or not neural_model.status()["trained"]:
+            raise
+        generated = neural_model.generate(request.message, max_tokens=60)
+        return {
+            "answer": "FIRA — génération expérimentale depuis son réseau neuronal :\n\n"
+                      + generated
+                      + "\n\n[Limite : ce modèle prédit des mots appris; il ne comprend pas encore réellement la question.]",
+            "model": "fira-tiny-neural-experimental",
+        }
 
 
 @app.post("/v1/security/audit-plan")

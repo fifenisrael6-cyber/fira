@@ -18,7 +18,8 @@ def test_capabilities_keep_active_execution_disabled():
     assert data["agent_execution_enabled"] is False
     assert data["youtube_learning"] is True
     assert data["security_audit_planning"] is True
-    assert data["provider_mode"] == "local-first-no-api-key"
+    assert data["model_connected"] is False
+    assert data["provider_mode"] == "from-scratch-no-external-ai"
 
 
 def test_chat_uses_local_model_without_provider_key(monkeypatch):
@@ -102,3 +103,83 @@ def test_wifi_audit_rejects_unknown_security_mode():
     assert response.status_code == 422
 
 
+
+
+def test_capabilities_report_from_scratch_mode():
+    data = client.get("/v1/capabilities").json()
+    assert data["provider_mode"] == "from-scratch-no-external-ai"
+    assert data["model_connected"] is False
+    assert data["active_scanning_enabled"] is False
+
+
+def test_learning_status_is_available():
+    response = client.get("/v1/learn/status")
+    assert response.status_code == 200
+    assert response.json()["pretrained_weights"] is False
+
+
+def test_training_requires_permission():
+    response = client.post("/v1/learn/train", json={
+        "text": "Voici un texte suffisamment long pour commencer un apprentissage simple."
+    })
+    assert response.status_code == 403
+
+
+def test_train_generate_and_reload(tmp_path, monkeypatch):
+    from app.learning_engine import NGramLanguageModel
+    model = NGramLanguageModel(tmp_path / "fira.json")
+    monkeypatch.setattr(main, "language_model", model)
+    trained = client.post("/v1/learn/train", json={
+        "authorization_confirmed": True,
+        "source_label": "corpus de test",
+        "text": "FIRA apprend le langage. FIRA apprend le code. Le langage aide FIRA.",
+    })
+    assert trained.status_code == 200
+    assert trained.json()["model"]["total_tokens"] > 0
+    generated = client.post("/v1/learn/generate", json={
+        "seed_text": "FIRA apprend", "max_tokens": 10, "seed": 4
+    })
+    assert generated.status_code == 200
+    assert generated.json()["text"]
+    assert NGramLanguageModel(tmp_path / "fira.json").status()["trained"] is True
+
+
+def test_generate_rejects_untrained_model(tmp_path, monkeypatch):
+    from app.learning_engine import NGramLanguageModel
+    monkeypatch.setattr(main, "language_model", NGramLanguageModel(tmp_path / "empty.json"))
+    response = client.post("/v1/learn/generate", json={"max_tokens": 10})
+    assert response.status_code == 409
+
+
+def test_neural_training_requires_permission():
+    response = client.post("/v1/learn/neural/train", json={
+        "text": "FIRA apprend progressivement le langage et le code avec un petit réseau neuronal."
+    })
+    assert response.status_code == 403
+
+
+def test_neural_model_train_generate_and_reload(tmp_path, monkeypatch):
+    from app.neural_learning import TinyNeuralLanguageModel
+    model = TinyNeuralLanguageModel(tmp_path / "tiny.npz", embedding_size=8)
+    monkeypatch.setattr(main, "neural_model", model)
+    text = ("FIRA apprend le langage. FIRA apprend le code. "
+            "Le réseau neuronal prédit le prochain mot. " * 8)
+    trained = client.post("/v1/learn/neural/train", json={
+        "authorization_confirmed": True, "text": text, "epochs": 2
+    })
+    assert trained.status_code == 200
+    assert trained.json()["model"]["final_loss"] > 0
+    generated = client.post("/v1/learn/neural/generate", json={
+        "seed_text": "FIRA apprend", "max_tokens": 8, "seed": 3
+    })
+    assert generated.status_code == 200
+    assert generated.json()["text"]
+    restored = TinyNeuralLanguageModel(tmp_path / "tiny.npz")
+    assert restored.status()["trained"] is True
+
+
+def test_neural_generation_requires_training(tmp_path, monkeypatch):
+    from app.neural_learning import TinyNeuralLanguageModel
+    monkeypatch.setattr(main, "neural_model", TinyNeuralLanguageModel(tmp_path / "empty.npz"))
+    response = client.post("/v1/learn/neural/generate", json={"max_tokens": 8})
+    assert response.status_code == 409

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/fira_api.dart';
 import 'services/youtube_learning.dart';
 import 'wifi_audit_page.dart';
+import 'fira_learning_page.dart';
 
 void main() => runApp(const FiraApp());
 
@@ -122,6 +123,7 @@ class _FiraHomeState extends State<FiraHome> {
         IconButton(onPressed: _loading ? null : () => setState(() => _messages.clear()),
           icon: const Icon(Icons.add_comment_outlined), tooltip: 'Nouvelle conversation'),
         IconButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => WifiAuditPage(serverUrl: _server))), icon: const Icon(Icons.wifi), tooltip: 'Audit Wi-Fi'),
+        IconButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => FiraLearningPage(serverUrl: _server))), icon: const Icon(Icons.school_outlined), tooltip: 'Apprentissage FIRA'),
         IconButton(onPressed: _openSettings, icon: const Icon(Icons.tune), tooltip: 'Réglages'),
       ],
     ),
