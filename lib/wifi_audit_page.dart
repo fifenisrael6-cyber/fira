@@ -89,11 +89,11 @@ class _WifiAuditPageState extends State<WifiAuditPage> {
         const SizedBox(height: 20),
         Card(color: Colors.white, child: Padding(padding: const EdgeInsets.all(16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Niveau global : ${_result!.level.toUpperCase()}, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+            Text('Niveau global : ${_result!.level.toUpperCase()}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             const Divider(height: 22),
             ..._result!.findings.map((item) => Padding(padding: const EdgeInsets.only(bottom: 14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('[${(item['level'] ?? 'info').toString().toUpperCase()}] ${item['title'] ?? ''},
+                Text('[${(item['level'] ?? 'info').toString().toUpperCase()}] ${item['title'] ?? ''}',
                   style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
                 Text((item['recommendation'] ?? '').toString(), style: const TextStyle(height: 1.4)),
