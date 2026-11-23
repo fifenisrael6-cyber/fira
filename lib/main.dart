@@ -55,7 +55,7 @@ class _FiraHomeState extends State<FiraHome> {
     setState(() { _messages.add(_Message(value, true)); _loading = true; });
     _input.clear();
     try {
-      final video = RegExp(r'https?://(?:www\\.)?(?:youtube\\.com/watch\\?v=|youtu\\.be/)[\\w-]{11}').firstMatch(value);
+      final video = RegExp(r'https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)[\w-]{11}').firstMatch(value);
       final String answer;
       if (video != null) {
         final lesson = await _youtube.analyze(serverUrl: _server, youtubeUrl: video.group(0)!);
